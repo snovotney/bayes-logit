@@ -13,24 +13,13 @@ class LogisticRegression(object):
         self.n_in = X.shape[1]
         self.n_out = 2 #always binary
         
-        self.index = T.lscalar()
-
         # X is features and Y is labels
         self.X = theano.shared(np.asarray(X, dtype=theano.config.floatX),borrow=self.borrow)
-        self.Y = theano.shared(np.asarray(Y, dtype=theano.config.floatX),borrow=self.borrow)
+        self.Y = theano.shared(np.asarray(Y, dtype='int64'),borrow=self.borrow)
 
         # X is features and Y is labels
         self.Xval = theano.shared(np.asarray(X, dtype=theano.config.floatX),borrow=self.borrow)
-        self.Yval = theano.shared(np.asarray(Y, dtype=theano.config.floatX),borrow=self.borrow)
-        
-        # fix Y so that it can be passed to functions
-        self.Y = self.Y.flatten()
-        self.Y = T.cast(self.Y, 'int32')
-
-
-        # fix Y so that it can be passed to functions
-        self.Yval = self.Yval.flatten()
-        self.Yval = T.cast(self.Yval, 'int32')
+        self.Yval = theano.shared(np.asarray(Y, dtype='int64'),borrow=self.borrow)
         
         # params
         self.W = theano.shared(value = np.zeros((self.n_in, self.n_out), dtype=theano.config.floatX),
@@ -40,9 +29,11 @@ class LogisticRegression(object):
 
         self.params = [self.W, self.b]        
 
+        self.index = T.lscalar()
+
         # these are symbolic variables
         self.x = T.matrix('x')
-        self.y = T.ivector('y')
+        self.y = T.lvector('y')
 
         self.p_y_given_x = T.nnet.softmax(T.dot(self.x, self.W) + self.b)
         self.y_pred = T.argmax(self.p_y_given_x, axis=1)
@@ -78,6 +69,7 @@ class LogisticRegression(object):
             inputs=[self.index],
             outputs=self.cost,
             updates=self.updates,
+            on_unused_input='ignore',
             givens={
                 self.x: self.X[self.index * self.batch_size: (self.index + 1) * self.batch_size],
                 self.y: self.Y[self.index * self.batch_size: (self.index + 1) * self.batch_size],
@@ -89,8 +81,10 @@ class LogisticRegression(object):
     def lklhd(self,Y):
         return -T.mean(T.log(self.p_y_given_x)[T.arange(Y.shape[0]), Y])
 
+
     def lklhd_L2(self):
-        pass
+        cost = self.lklhd
+        l2 = T.sum(self.params ** 2) / self.sigma2
 
     def lklhd_gaussian_prior(self):
         pass
@@ -114,6 +108,7 @@ class LogisticRegression(object):
         
     def train(self, index, prior):
         self.train_model(index)
+        
 
 
     def validate(self,X,Y,batches):

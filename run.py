@@ -109,7 +109,7 @@ while (epoch < num_epochs and not done_looping):
                     update_model[i] = False
         
 
-        #TODO: ad prior update
+        #TODO: add prior update
         
         if patience <= epoch:
             done_looping = True
