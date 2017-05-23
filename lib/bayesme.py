@@ -3,13 +3,11 @@ import theano
 import theano.tensor as T
 
 class LogisticRegression(object):
-    def __init__(self, X, Y,batch_size=5, loss_function='lklhd'):
-
-        print("creating model")
+    def __init__(self, X, Y,batch_size=50, loss_function='lklhd', learning_rate=0.1):
 
         self.borrow=False                
         self.batch_size=batch_size
-        self.learning_rate=0.13
+        self.learning_rate=learning_rate
 
         # number of features
         self.n_in = X.shape[1]
@@ -21,10 +19,19 @@ class LogisticRegression(object):
         self.X = theano.shared(np.asarray(X, dtype=theano.config.floatX),borrow=self.borrow)
         self.Y = theano.shared(np.asarray(Y, dtype=theano.config.floatX),borrow=self.borrow)
 
+        # X is features and Y is labels
+        self.Xval = theano.shared(np.asarray(X, dtype=theano.config.floatX),borrow=self.borrow)
+        self.Yval = theano.shared(np.asarray(Y, dtype=theano.config.floatX),borrow=self.borrow)
+        
         # fix Y so that it can be passed to functions
         self.Y = self.Y.flatten()
         self.Y = T.cast(self.Y, 'int32')
 
+
+        # fix Y so that it can be passed to functions
+        self.Yval = self.Yval.flatten()
+        self.Yval = T.cast(self.Yval, 'int32')
+        
         # params
         self.W = theano.shared(value = np.zeros((self.n_in, self.n_out), dtype=theano.config.floatX),
                                name='W',borrow=self.borrow)
@@ -40,13 +47,13 @@ class LogisticRegression(object):
         self.p_y_given_x = T.nnet.softmax(T.dot(self.x, self.W) + self.b)
         self.y_pred = T.argmax(self.p_y_given_x, axis=1)
 
-        # Validation graph
-        self.validate =  theano.function(
+        # Validation graph. self.Xval and self.Yval are set down in the validate function
+        self._validate =  theano.function(
             inputs=[self.index],
             outputs=self.errors(self.y),
             givens={
-                self.x: self.X[self.index * self.batch_size: (self.index + 1) * self.batch_size],
-                self.y: self.Y[self.index * self.batch_size: (self.index + 1) * self.batch_size]
+                self.x: self.Xval[self.index * self.batch_size: (self.index + 1) * self.batch_size],
+                self.y: self.Yval[self.index * self.batch_size: (self.index + 1) * self.batch_size]
             }
         )
 
@@ -109,8 +116,15 @@ class LogisticRegression(object):
         self.train_model(index)
 
 
-    def validate(self, index):
-        return self.validate(index)
+    def validate(self,X,Y,batches):
+        self.Xval = theano.shared(np.asarray(X, dtype=theano.config.floatX),borrow=self.borrow)
+        self.Yval = theano.shared(np.asarray(Y, dtype=theano.config.floatX),borrow=self.borrow)        
+
+        # fix Y so that it can be passed to functions
+        self.Yval = self.Yval.flatten()
+        self.Yval = T.cast(self.Yval, 'int32')
+
+        return np.mean( [self._validate(j) for j in range(batches)])
 
 
     
