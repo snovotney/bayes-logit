@@ -8,7 +8,7 @@ from bayesme import *
 from dataset import *
 from sklearn.linear_model import LogisticRegression as LogIt
 
-num_sets = 1
+num_sets = 3
 
 # train on the K different subsets
 batch_size = 50
@@ -45,10 +45,9 @@ prior = LogisticRegressionPrior(models)
 
 
 # train sklearn logit to compare
-
-logit = LogIt()
-logit.fit(trainX[0], trainY[0])
-print(1-logit.score(testX[0],testY[0]))
+#logit = LogIt()
+#logit.fit(trainX[0], trainY[0])
+#print(1-logit.score(testX[0],testY[0]))
 
 best_validation_loss = np.inf
 done_looping = False
@@ -65,6 +64,9 @@ for i in range(num_sets):
 
 #TODO: add patience update
 epoch = 0
+weights = [ [] for i in range(num_sets)]
+best_validation_loss = [ np.inf ] * num_sets
+update_model = [True ] * num_sets
 
 while (epoch < num_epochs and not done_looping):
     epoch = epoch + 1
@@ -74,38 +76,41 @@ while (epoch < num_epochs and not done_looping):
 
         model = models[i]
 
-        #do mini-batch updates
-        for minibatch_index in range(num_train_batches[i]):
-            minibatch_avg_cost = model.train(minibatch_index, prior)
+        if update_model[i]:
+            #do mini-batch updates
+            for minibatch_index in range(num_train_batches[i]):
+                minibatch_avg_cost = model.train(minibatch_index, prior)
 
+            # compute zero-one loss on validation set
+            this_validation_loss = model.validate(testX[i], testY[i], num_valid_batches[i])
 
-        # compute zero-one loss on validation set
-        this_validation_loss = model.validate(testX[i], testY[i], num_valid_batches[i])
+            if this_validation_loss < best_validation_loss[i]:
 
-        #TODO add min validation loss for K models
+                #improve patience if loss improvement is good enough
+                if this_validation_loss < best_validation_loss[i] *  \
+                   improvement_threshold:
+                    patience = max(patience, epoch + patience_increase)
 
-        if this_validation_loss < best_validation_loss:
-            #improve patience if loss improvement is good enough
-            if this_validation_loss < best_validation_loss *  \
-               improvement_threshold:
-                patience = max(patience, epoch + patience_increase)
+                    best_validation_loss[i] = this_validation_loss
+                    print('model %i, epoch %i, minibatch %i/%i, validation error %f %%' % (
+                        i,
+                        epoch,
+                        minibatch_index + 1,
+                        num_train_batches[i],
+                        this_validation_loss * 100.
+                    )
+                    )
 
-            best_validation_loss = this_validation_loss
-            print('model %i, epoch %i, minibatch %i/%i, validation error %f %%' % (
-                i,
-                epoch,
-                minibatch_index + 1,
-                num_train_batches[i],
-                this_validation_loss * 100.
-            )
-            )
+                    #store off best weights for inspection later
+                    W = model.params[0].get_value()
+                    b = model.params[1].get_value()
+                    weights[i].append([W,b])                    
+                else: #if we saw a gain less than the desired threshold, stop updating
+                    update_model[i] = False
         
-        W = model.params[0].get_value()
-        b = model.params[1].get_value()
-        print(W[:,0],b[0])
+
+        #TODO: ad prior update
         
-        
-        #TODO: add prior update
         if patience <= epoch:
             done_looping = True
             break
@@ -113,7 +118,6 @@ while (epoch < num_epochs and not done_looping):
 end_time = timeit.default_timer()
 print('The code run for %d epochs, with %f epochs/sec' % (epoch, 1. * epoch / (end_time - start_time)))
 # visualize
-
 # save out the K models
 
     
