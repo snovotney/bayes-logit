@@ -43,6 +43,7 @@ class ToyDataSet(DataSet):
                                       n_redundant=0,
                                       n_classes=2,
                                       shift=means[i],
+                                      random_state=123
             )
 
             #add 1 to each feature vector to add bias term to model
