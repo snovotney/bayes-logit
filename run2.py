@@ -8,10 +8,11 @@ from bayesme2 import *
 from dataset import *
 from sklearn.linear_model import LogisticRegression as LogIt
 
-num_sets = 3
+num_sets = 1
 batch_size = 50 #TODO: variable batch size depending on amoutn of data?
-num_epochs = 10
+num_epochs = 100
 learning_rate = 0.1
+tol = 0.98 # new accuracy must be less than old acc * tolerance to keep training
 # read in the N different training sets
 # X is of dim (K x M x Nk)
 #    K = # of unique domains
@@ -54,15 +55,29 @@ def sgd_one_epoch(model, X, Y, Xval, Yval, learning_rate):
     return(avg_cost / num_train_batches, 100 * val_acc / num_val_batches, theta.flatten())
 
     
-    
+best_acc = [0] * num_sets
+best_epoch = [0] * num_sets
+update = [True] * num_sets
 
-    
-#
 for epoch in range(num_epochs):
+
     for i in range(num_sets):
-        train_cost, test_acc, theta = sgd_one_epoch(models[i],trainX[i],trainY[i],testX[i], testY[i], learning_rate)
-        print("{:2d} model {:2d}: cost={:5.2f} test-acc: {:5.2f} ".format(epoch+1,i, train_cost, test_acc), theta)
-        
+
+        if update[i]:
+            train_cost, test_acc, theta = sgd_one_epoch(models[i],trainX[i],trainY[i],testX[i], testY[i], learning_rate)
+            print("{:2d} model {:2d}: cost={:5.5f} test-acc: {:5.5f} ".format(epoch+1,i, train_cost, test_acc), theta)
+
+            # if accuracy went down and the best accuracy was seen more than two epochs ago
+            if test_acc > tol * best_acc[i] and (epoch - best_epoch[i]) > 1:
+                update[i] = False
+                print("no longer updating model", i)
+
+            if test_acc > best_acc[i]:
+                best_acc[i] = test_acc
+                best_epoch[i] = epoch
+
+
+        #do we keep training?
 
 
 
