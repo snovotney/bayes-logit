@@ -45,11 +45,15 @@ class ToyDataSet(DataSet):
                                       shift=means[i],
             )
 
+            #add 1 to each feature vector to add bias term to model
+            x1 = np.zeros((x.shape[0],x.shape[1]+1))
+            x1.fill(1)
+            x1[:,:-1] = x
 
-            Xtrain.append(x[0:cutoff])
-            Ytrain.append(y[0:cutoff])
-            Xtest.append(x[cutoff:])
-            Ytest.append(y[cutoff:])
+            Xtrain.append(np.matrix(x1[0:cutoff]))
+            Ytrain.append(np.matrix(y[0:cutoff]).T)
+            Xtest.append(np.matrix(x1[cutoff:]))
+            Ytest.append(np.matrix(y[cutoff:]).T)
                         
             print("Set {}: #samples:{} mean:{:2f} var{:2f}".format(i+1, num_samples[i], np.mean(x), np.var(x)))
             
