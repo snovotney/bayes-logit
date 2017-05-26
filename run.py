@@ -11,13 +11,16 @@ from sklearn.linear_model import LogisticRegression as LogIt
 
 
 num_sets = 5
-batch_size = 3000  #TODO: variable batch size depending on amount of data?
-num_epochs = 100
-learning_rate = 0.1
+batch_size = 128  #TODO: variable batch size depending on amount of data?
+num_epochs = 50
+learning_rate = 0.01
+
 learning_rate_decay = 0.95
 tol = 0.98 # new accuracy must be less than old acc * tolerance to keep training
-sigma2 = [0.1, 0.2, 0.4, 0.8, 1.6]
-psigma = 0.01
+sigma2 = [ 0.001 * 2**x for x in range(num_sets) ]
+print(sigma2)
+
+psigma = 0.01 / num_sets
 
 
 # read in the N different training sets
@@ -31,7 +34,7 @@ psigma = 0.01
 #
 
 data=ToyDataSet()
-trainX, trainY, testX, testY = data.load(num_samples=[10000] * num_sets, num_sets=num_sets, means=[0,0.25,0.5,0.75,1])
+trainX, trainY, testX, testY = data.load(num_samples=[10000] * num_sets, num_sets=num_sets, means=[-1, -0.5, 0, 0.5, 1])
 
 
 models = []
@@ -99,7 +102,8 @@ for epoch in range(num_epochs):
                                                         )
             curr_theta[i] = theta
 
-            print("{:2d} model {:2d}: cost={:5.5f} lklhd={:5.5f} prior={:5.5f} test-acc: {:5.5f} ".format(epoch+1,i, cost, lklhd, prior,test_acc), theta)
+#            print("{:2d} model {:2d}: cost={:5.5f} lklhd={:5.5f} prior={:5.5f} test-acc: {:5.5f} ".format(epoch+1,i, cost, lklhd, prior,test_acc), theta)
+            print("{:2d} model {:2d}: cost={:5.5f} lklhd={:5.5f} prior={:5.5f} test-acc: {:5.5f} ".format(epoch+1,i, cost, lklhd, prior,test_acc))            
 
             if test_acc > best_acc[i]:
                 best_acc[i] = test_acc
@@ -113,14 +117,20 @@ for epoch in range(num_epochs):
 
     # update priors
     pi.update(best_theta, sigma2)
-    print("prior", pi.theta.flatten())
+#    print("prior", pi.theta.flatten())
 
         
 
 print()
 
+print("logMeanWeight of prior={:5.2f}".format( np.log(np.abs(np.mean(pi.theta.flatten())))))
 for i in range(num_sets):
-    print("{:5.2f} {:d}".format(best_acc[i], best_epoch[i]), best_theta[i])
+    print("acc:{:5.2f} best epoch:{:3d} logPenalty:{:5.2f} logMeanWeightDiff:{:5.2f} sigma:{:.5f}" .format(
+        best_acc[i], 1+best_epoch[i],
+        np.log(np.mean(pi.theta.flatten() - best_theta[i])**2),
+        np.log(np.abs(np.mean(best_theta[i]))),
+        sigma2[i]
+    ))
 
 
 
