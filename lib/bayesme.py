@@ -2,6 +2,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 
+import scipy.optimize as so
 
 def logistic(x):
     return 1.0 / (1.0 + T.exp(-x))
@@ -43,7 +44,7 @@ class LogisticRegression(object):
         # MAP: cost = sum p(yi|xi) + p(theta|theta0)
         # 
         elif loss == 'gaussian':
-            self.cost = self.lklhd.mean() + self.prior.mean()
+            self.cost =  self.lklhd.mean() + self.prior.mean()
             self.gtheta = T.grad(self.cost, self.theta)            
 
             self.update = theano.function(
@@ -57,8 +58,24 @@ class LogisticRegression(object):
 
         self.predict = theano.function(inputs=[self.x], outputs=self.pred)
         
-            
 class LogisticRegressionPrior(object):
 
-    def  __init__(self,models):
-        print( "loaded logit prior")
+    def  __init__(self,ndim,mean=0,sigma2=1):
+        self.theta = np.zeros((ndim,1))
+        self.sigma2 = sigma2
+        self.theta.fill(mean)
+        
+    def objective(self,x):
+        total = 0
+        for i in range(len(self.thetas)):
+            total += (x - self.thetas[i]) * self.sigmas[i] 
+        return np.array(total - x * self.sigma2)
+        
+    def update(self, thetas, sigmas):
+        self.thetas = thetas
+        self.sigmas = sigmas
+        root = so.fsolve(self.objective,x0 = [0] * len(thetas[0]))
+        self.theta = np.ndarray(shape=self.theta.shape,buffer=root)
+
+
+        
