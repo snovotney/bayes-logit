@@ -13,15 +13,17 @@ from sklearn.linear_model import LogisticRegression as LogIt
 num_sets = 5
 batch_size = 128  #TODO: variable batch size depending on amount of data?
 num_epochs = 50
-learning_rate = 0.01
+learning_rate = 0.05
 
 learning_rate_decay = 0.95
 tol = 0.98 # new accuracy must be less than old acc * tolerance to keep training
 sigma2 = [ 0.001 * 2**x for x in range(num_sets) ]
+sigma2 = [0] * num_sets
+sigma2 = [ 0.01  for x in range(num_sets) ]
 print(sigma2)
 
-psigma = 0.01 / num_sets
-
+#scale psigma to account for the prior loss function summing over the #of sets
+psigma = 0.1 * num_sets #smaller is towards MLE
 
 # read in the N different training sets
 # X is of dim (K x M x Nk)
@@ -34,7 +36,7 @@ psigma = 0.01 / num_sets
 #
 
 data=ToyDataSet()
-trainX, trainY, testX, testY = data.load(num_samples=[10000] * num_sets, num_sets=num_sets, means=[-1, -0.5, 0, 0.5, 1])
+trainX, trainY, testX, testY = data.load(num_samples=[500] * num_sets, num_sets=num_sets, means=[-1, -0.5, 0, 0.5, 1])
 
 
 models = []
@@ -91,6 +93,7 @@ for epoch in range(num_epochs):
 
     if not any(update):
         break
+    
     for i in range(num_sets):
         if update[i]:
             cost, lklhd, prior, test_acc, theta = sgd_one_epoch(models[i],
@@ -112,7 +115,7 @@ for epoch in range(num_epochs):
                 
             # if accuracy went down and the best accuracy was seen more than two epochs ago
             if test_acc <= best_acc[i] and (epoch - best_epoch[i]) > 1:
-                update[i] = False
+#                update[i] = False
                 print("no longer updating model", i)
 
     # update priors

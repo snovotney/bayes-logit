@@ -38,9 +38,9 @@ class ToyDataSet(DataSet):
 
             cutoff = int(0.67 * num_samples[i])
             
-            x,y = make_classification(n_samples=num_samples[i], n_features=100,
-                                      n_informative=50,
-                                      n_redundant=50,
+            x,y = make_classification(n_samples=num_samples[i], n_features=4,
+                                      n_informative=2,
+                                      n_redundant=2,
                                       n_classes=2,
                                       shift=means[i],
                                       random_state=123
